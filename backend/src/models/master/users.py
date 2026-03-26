@@ -20,6 +20,7 @@ class UserMasterApp(MasterMetadata, table=True):
     
     @staticmethod
     def verify_password(plain_password: str, hashed_password: str) -> bool:
+        print(f"Verifying password: {plain_password} against hash: {hashed_password}")
         return UserMasterApp.hash_password(plain_password) == hashed_password
     
     @staticmethod

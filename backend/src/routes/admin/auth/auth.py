@@ -9,7 +9,7 @@ from src.db.db import get_master_session
 from src.utils.jwt_depends import get_jwt_username
 from src.models.master.users import UserMasterApp
 from .forms import LoginForm, RefreshTokenForm
-from src.db import get_session, redis_client
+from src.db import get_session, redis_master
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlmodel import select
 from src.routes.types import UserData
@@ -21,8 +21,7 @@ router = APIRouter(prefix="/admin/auth", tags=["Admin Auth"])
 @router.post("/login")
 async def login(user: LoginForm, session=Depends(get_master_session)):
     cache_key = f"user:{user.username}"
-    print(f"Attempting login for {user.username}")  # Debug log para verificar el intento de login
-    cached_user = redis_client.get(cache_key)
+    cached_user = redis_master.get(cache_key)
 
     if cached_user:
         # 1. Evitamos eval() usando json.loads para seguridad
@@ -35,23 +34,20 @@ async def login(user: LoginForm, session=Depends(get_master_session)):
                 detail="Invalid username or password (from cache)"
             )
     else:
-        # 2. Proyección limpia: solo pedimos lo necesario a la DB
-        statement = select(UserMasterApp.id, UserMasterApp.username, UserMasterApp.hashed_password).where(UserMasterApp.username == user.username)
+        statement = select(UserMasterApp.id, UserMasterApp.username, UserMasterApp.hashed_password, UserMasterApp.email ).where(UserMasterApp.username == user.username)
         db_result = UserData.interface(session.exec(statement).mappings().first())
 
-        # 3. Validación: Si no existe el usuario o la clave falla
         if not db_result or not UserMasterApp.verify_password(user.password, db_result.hashed_password):
-            print(f"Login failed for {user.username}. Paswword")  # Debug log para intentos fallidos
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED, 
                 detail="Invalid username or password"
             )
 
         # 5. Guardamos en Redis como JSON (más estándar que un string de objeto)
-        redis_client.set(cache_key, db_result.model_dump_json(), 3600)
+        redis_master.set(cache_key, db_result.model_dump_json(), 3600)
 
     jwt, reset_jwt = UserMasterApp.generate_jwt(db_result.username, db_result.hashed_password)
-    redis_client.set(f"jwt:{db_result.username}", reset_jwt, 3600*24)  # Guardamos el JWT en Redis con expiración
+    redis_master.set(f"jwt:{db_result.username}", reset_jwt, 3600*24)  # Guardamos el JWT en Redis con expiración
     print(f"Generated JWT for {db_result.username}: {reset_jwt}")  # Debug log para verificar el JWT generado
 
     return {"message": "Login successful", "user_data": {
@@ -102,8 +98,8 @@ async def change_password(
             "hashed_password": user_db.hashed_password,
         }
     )
-    redis_client.set(f"user:{user_db.username}", user_data.model_dump_json(), 3600)
-    redis_client.set(f"jwt:{user_db.username}", new_reset_jwt, 3600 * 24)
+    redis_master.set(f"user:{user_db.username}", user_data.model_dump_json(), 3600)
+    redis_master.set(f"jwt:{user_db.username}", new_reset_jwt, 3600 * 24)
 
     return {
         "message": "Password changed successfully",
@@ -117,7 +113,7 @@ async def change_password(
 
 @router.post("/logout")
 async def logout(user: UserData = Depends(get_jwt_username)):
-    redis_client.delete(f"jwt:{user.username}")
+    redis_master.delete(f"jwt:{user.username}")
     return {"message": "Logout successful"}
 
 @router.get("")
@@ -165,7 +161,7 @@ def refresh_token(data: RefreshTokenForm, session=Depends(get_master_session)):
             detail="Invalid refresh token payload",
         )
 
-    stored_refresh = redis_client.get(f"jwt:{username}")
+    stored_refresh = redis_master.get(f"jwt:{username}")
     if not stored_refresh:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -183,7 +179,7 @@ def refresh_token(data: RefreshTokenForm, session=Depends(get_master_session)):
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Refresh token mismatch",
         )
-    user_data = redis_client.get(f"user:{username}")
+    user_data = redis_master.get(f"user:{username}")
     if not user_data:
         statement = select(UserMasterApp.id, UserMasterApp.username, UserMasterApp.hashed_password).where(UserMasterApp.username == username)
         user_data = UserData.interface(session.exec(statement).mappings().first())
@@ -204,8 +200,8 @@ def refresh_token(data: RefreshTokenForm, session=Depends(get_master_session)):
         )
 
     new_jwt, new_reset_jwt = UserMasterApp.generate_jwt(user_data.username, user_data.hashed_password)
-    redis_client.set(f"jwt:{user_data.username}", new_reset_jwt, 3600 * 24)
-    redis_client.set(f"user:{user_data.username}", user_data.model_dump_json(), 3600)
+    redis_master.set(f"jwt:{user_data.username}", new_reset_jwt, 3600 * 24)
+    redis_master.set(f"user:{user_data.username}", user_data.model_dump_json(), 3600)
 
     return {
         "message": "Token refreshed",
@@ -239,7 +235,7 @@ async def generate_token_reset_password(username: Annotated[str, Form()], sessio
         "exp": int(time()) + 900,
     }
     token = jwt.encode(token_payload, secret_key, algorithm="HS256")
-    redis_client.set(f"reset-password:{user_data.username}", token, 900)
+    redis_master.set(f"reset-password:{user_data.username}", token, 900)
 
     return {
         "message": "Password reset token generated",
@@ -282,7 +278,7 @@ async def reset_password(token: Annotated[str, Form()], new_password: Annotated[
             detail="Invalid reset token payload",
         )
 
-    stored_token = redis_client.get(f"reset-password:{username}")
+    stored_token = redis_master.get(f"reset-password:{username}")
     if not stored_token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -327,9 +323,9 @@ async def reset_password(token: Annotated[str, Form()], new_password: Annotated[
             "hashed_password": user_db.hashed_password,
         }
     )
-    redis_client.set(f"user:{user_db.username}", user_data.model_dump_json(), 3600)
-    redis_client.set(f"jwt:{user_db.username}", new_reset_jwt, 3600 * 24)
-    redis_client.delete(f"reset-password:{user_db.username}")
+    redis_master.set(f"user:{user_db.username}", user_data.model_dump_json(), 3600)
+    redis_master.set(f"jwt:{user_db.username}", new_reset_jwt, 3600 * 24)
+    redis_master.delete(f"reset-password:{user_db.username}")
 
     return {
         "message": "Password reset successful",
@@ -375,7 +371,7 @@ async def verify_token_reset_password(token: Annotated[str, Query(...)], session
             detail="Invalid reset token payload",
         )
 
-    stored_token = redis_client.get(f"reset-password:{username}")
+    stored_token = redis_master.get(f"reset-password:{username}")
     stored_token_str = (
         stored_token.decode("utf-8")
         if isinstance(stored_token, (bytes, bytearray))

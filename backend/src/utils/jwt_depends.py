@@ -8,7 +8,7 @@ from fastapi import Depends, HTTPException, Security, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
 from src.models.master.users import UserMasterApp
-from src.db import redis_client, engine
+from src.db import redis_master, engine
 from src.routes.types import UserData
 
 from sqlmodel import Session, select
@@ -61,7 +61,7 @@ def get_jwt_username(
 			detail="Invalid JWT: missing username",
 		)
 
-	user = redis_client.get(f"user:{username}")
+	user = redis_master.get(f"user:{username}")
 	if user:
 		cached = json.loads(user) if isinstance(user, str) else json.loads(user.decode("utf-8"))
 		user_data = UserData.interface(cached)
@@ -92,5 +92,5 @@ def get_jwt_username(
 			"hashed_password": user_db.hashed_password,
 		}
 	)
-	redis_client.set(f"user:{username}", user_data.model_dump_json(), 3600)
+	redis_master.set(f"user:{username}", user_data.model_dump_json(), 3600)
 	return user_data

@@ -7,6 +7,7 @@ class Apps(MasterMetadata, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
     name_client: str = Field(index=True, unique=True)
     db_client: str = Field(default="default")
+    redis_client: str = Field(default="default")
 
 class Urls(MasterMetadata, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)

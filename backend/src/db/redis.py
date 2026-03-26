@@ -15,8 +15,19 @@ class RedisClient:
         self.client.delete(key)
 
 
-redis_client = RedisClient(
+redis_master = RedisClient(
     host=environ.get('REDIS_HOST', 'localhost'),
     port=int(environ.get('REDIS_PORT', 6379)),
     db=int(environ.get('REDIS_DB', 0))
 )
+
+def get_redis_client(db_url: str) -> RedisClient:
+    # Parse the db_url to extract host, port, and db
+    # For simplicity, we assume the db_url is in the format: redis://host:port/db
+    try:
+        _, rest = db_url.split("://")
+        host_port, db = rest.split("/")
+        host, port = host_port.split(":")
+        return RedisClient(host=host, port=int(port), db=int(db))
+    except Exception as e:
+        raise ValueError(f"Invalid Redis URL: {db_url}") from e
