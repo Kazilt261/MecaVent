@@ -1,0 +1,83 @@
+services:
+    back-dev:
+        build: ./backend
+        command: uv run uvicorn main:app --host 0.0.0.0 --reload --port ${BACKEND_PORT:-5000}
+        volumes:
+            - ./backend:/app
+        extra_hosts:
+            - "host.docker.internal:host-gateway"
+        ports:
+            - "${BACKEND_PORT:-5000}:${BACKEND_PORT:-5000}"
+        env_file:
+            - .env
+        depends_on:
+            - db
+            - redis
+            - storage
+
+    db:
+        image: supabase/postgres:15.1.1.78
+        environment:
+            POSTGRES_PASSWORD: ${SUPABASE_DB_PASSWORD:-postgres}
+        volumes:
+            - supabase_db_data:/var/lib/postgresql/data
+        ports:
+            - "${SUPABASE_DB_PORT:-54322}:5432"
+        env_file:
+            - .env
+
+    storage:
+        image: supabase/storage-api:v0.43.12
+        depends_on:
+            - db
+        ports:
+            - "${STORAGE_PORT:-8083}:8083"
+        environment:
+            ANON_KEY: ${ANON_KEY}
+            SERVICE_KEY: ${SERVICE_ROLE_KEY}
+            PGRST_JWT_SECRET: ${PGRST_JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
+            DATABASE_URL: postgres://postgres:${SUPABASE_DB_PASSWORD:-postgres}@supabase-db:5432/postgres
+            POSTGRES_BACKEND_URL: postgres://postgres:${SUPABASE_DB_PASSWORD:-postgres}@supabase-db:5432/postgres
+            GLOBAL_S3_BUCKET: ${GLOBAL_S3_BUCKET:-local}
+            FILE_SIZE_LIMIT: 52428800 # 50MB
+            STORAGE_BACKEND: file
+            FILE_STORAGE_BACKEND_PATH: /var/lib/storage
+            TENANT_ID: default
+            REGION: local
+        volumes:
+            - ./volumes/storage:/var/lib/storage
+
+    redis:
+        image: redis:7
+        ports:
+            - "${REDIS_PORT:-6379}:6379"
+        env_file:
+            - .env
+
+    front-dev:
+        build: ./frontend
+        command: npm run dev -- --host --port ${FRONTEND_PORT:-5173}
+        volumes:
+            - ./frontend:/app
+            - /app/node_modules
+        ports:
+            - "${FRONTEND_PORT:-5173}:${FRONTEND_PORT:-5173}"
+        depends_on:
+            - back-dev
+        env_file:
+            - .env
+
+    prod:
+        build: .
+        env_file:
+            - .env
+        extra_hosts:
+            - "host.docker.internal:host-gateway"
+        environment:
+            URL_BACKEND: http://127.0.0.1:${BACKEND_PORT:-5000}
+        ports:
+            - "${FRONTEND_PORT:-5173}:${FRONTEND_PORT:-5173}"
+            - "${BACKEND_PORT:-5000}:${BACKEND_PORT:-5000}"
+
+volumes:
+    supabase_db_data:
