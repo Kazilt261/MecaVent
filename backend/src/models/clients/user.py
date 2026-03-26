@@ -1,13 +1,12 @@
 import hashlib
 from os import environ
 from time import time
-from typing import Optional
+from typing import List, Optional
 
 import jwt
-from pydantic import Field
 
 from src.models.db_declarations import AppMetadata
-
+from sqlmodel import JSON, Column, Field
 
 class User(AppMetadata, table=True):
     id: Optional[int] = Field(default=None, primary_key=True)
@@ -67,3 +66,7 @@ class User(AppMetadata, table=True):
             if "@" not in self.email or "." not in self.email:
                 return "Invalid email format"
         return None
+    
+class Roles(AppMetadata, table=True):
+    id: Optional[int] = Field(default=None, primary_key=True, foreign_key="user.id")
+    permisions: List[str] = Field(sa_column=Column(JSON))

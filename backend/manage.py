@@ -8,6 +8,9 @@ from src.models.master.apps import Apps
 
 parser = argparse.ArgumentParser(description="Manage the application.")
 
+ALEMBIC_CLIENT_INI = "alembic_client.ini"
+ALEMBIC_MASTER_INI = "alembic_master.ini"
+
 
 def get_available_clients() -> list[Apps]:
     with Session(engine) as session:
@@ -42,7 +45,6 @@ def select_client() -> Apps:
             print(f"Client '{client_name}' has no valid db_client configured.")
             continue
         return selected
-
 
 def run_alembic_for_client(args: list[str], client_db_url: str) -> int:
     env = os.environ.copy()
@@ -103,8 +105,20 @@ def new_super_user_master():
 def makemigrations():
     selected_client = select_client()
     name_change = input("Enter a name for the migration (e.g., 'add_users_table'): ")
+    command = [
+        "alembic",
+        "-c",
+        ALEMBIC_CLIENT_INI,
+        "-x",
+        "metadata=client",
+        "revision",
+        "--autogenerate",
+        "-m",
+        name_change,
+    ]
+
     return_code = run_alembic_for_client(
-        ["alembic", "-c", "alembic.ini", "revision", "--autogenerate", "-m", name_change],
+        command,
         selected_client.db_client,
     )
     if return_code != 0:
@@ -113,13 +127,24 @@ def makemigrations():
 
 def makemigrations_master():
     name_change = input("Enter a name for the master migration (e.g., 'add_users_table'): ")
-    command = f"alembic -c alembic.ini -x metadata=master revision --autogenerate -m '{name_change}'"
-    os.system(command)
+    command = [
+        "alembic",
+        "-c",
+        ALEMBIC_MASTER_INI,
+        "-x",
+        "metadata=master",
+        "revision",
+        "--autogenerate",
+        "-m",
+        name_change,
+    ]
+
+    subprocess.run(command)
 
 def migrate():
     selected_client = select_client()
     return_code = run_alembic_for_client(
-        ["alembic", "-c", "alembic.ini", "upgrade", "head"],
+        ["alembic", "-c", ALEMBIC_CLIENT_INI, "-x", "metadata=client", "upgrade", "head"],
         selected_client.db_client,
     )
     if return_code != 0:
@@ -127,8 +152,8 @@ def migrate():
 
 
 def migrate_master():
-    command = "alembic -c alembic.ini -x metadata=master upgrade head"
-    os.system(command)
+    command = ["alembic", "-c", ALEMBIC_MASTER_INI, "-x", "metadata=master", "upgrade", "head"]
+    subprocess.run(command)
 
 def delete_user():
     from src.models.master.users import UserMasterApp
