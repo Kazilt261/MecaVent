@@ -56,6 +56,28 @@ make
 - `make migrate-prod`: Apply backend migrations inside `prod`.
 - `make ssh-prod`: Open a shell in `prod`.
 
+## Backend Management Commands
+
+Use `python manage.py <command>` to run backend management tasks:
+
+### User Management
+
+- `create_superuser`: Create a new superuser for a client database.
+- `create_superuser_master`: Create a new superuser for the master database.
+- `delete_user`: Delete a user from a client database.
+- `delete_user_master`: Delete a user from the master database.
+
+### Migrations
+
+- `makemigrations`: Generate a new migration for a client database.
+- `makemigrations_master`: Generate a new migration for the master database.
+- `migrate`: Apply migrations to a client database.
+- `migrate_master`: Apply migrations to the master database.
+
+### Client Management
+
+- `list_clients`: List all available clients in the master database.
+
 ## Production Database and Redis Options
 
 Production can work in two ways:

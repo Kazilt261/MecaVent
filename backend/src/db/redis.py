@@ -1,5 +1,8 @@
+from fastapi import Request
 import redis
 from os import environ
+
+from src.db.db import get_client
 
 class RedisClient:
     def __init__(self, host='localhost', port=6379, db=0):
@@ -21,13 +24,20 @@ redis_master = RedisClient(
     db=int(environ.get('REDIS_DB', 0))
 )
 
-def get_redis_client(db_url: str) -> RedisClient:
+redis_clients = {}
+
+def get_redis_client(request: Request) -> RedisClient:
     # Parse the db_url to extract host, port, and db
     # For simplicity, we assume the db_url is in the format: redis://host:port/db
+    client = get_client(request)
+    db_url = client.redis_client
     try:
         _, rest = db_url.split("://")
         host_port, db = rest.split("/")
         host, port = host_port.split(":")
-        return RedisClient(host=host, port=int(port), db=int(db))
+        if db_url not in redis_clients:
+            redis_clients[db_url] = RedisClient(host=host, port=int(port), db=int(db))
+        return redis_clients[db_url]
     except Exception as e:
         raise ValueError(f"Invalid Redis URL: {db_url}") from e
+    

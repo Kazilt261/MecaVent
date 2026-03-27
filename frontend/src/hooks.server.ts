@@ -1,4 +1,5 @@
 import { env } from "$env/dynamic/private";
+import { getHost } from "$lib/utils/get_host";
 import type { Handle } from "@sveltejs/kit";
 
 export const handle: Handle = async ({ event, resolve }) => {
@@ -8,7 +9,7 @@ export const handle: Handle = async ({ event, resolve }) => {
     }
 
     let jwt = cookies.get("jwt");
-    let refreshToken = cookies.get("refresh_jwt"); 
+    let refreshToken = cookies.get("refresh_jwt");
     let admin_mode = false;
 
     if (event.url.pathname.startsWith("/admin")) {
@@ -16,16 +17,18 @@ export const handle: Handle = async ({ event, resolve }) => {
         refreshToken = cookies.get("refresh_jwt_admin");
         admin_mode = true;
     }
-    console.log("admin_mode:", admin_mode, "jwt:", jwt, "refreshToken:", refreshToken);
+
+    const request = event.request;
 
     if (!jwt && refreshToken) {
         try {
             const backendUrl = env.URL_BACKEND;
-            
-            const response = await fetch(`${backendUrl}${admin_mode?"/admin":""}/auth/refresh`, {
+            console.log("host:", getHost(request));
+            const response = await fetch(`${backendUrl}${admin_mode ? "/admin" : ""}/auth/refresh`, {
                 method: "POST",
                 headers: {
-                    "Content-Type": "application/json"
+                    "Content-Type": "application/json",
+                    "x-tenant-host": getHost(request),
                 },
                 body: JSON.stringify({ refresh_token: refreshToken })
             });
@@ -55,10 +58,13 @@ export const handle: Handle = async ({ event, resolve }) => {
                 }
             } else {
                 console.log("refresh falló:", response.status);
+                console.error("jwt:", jwt);
+                console.error("refreshToken:", refreshToken);
             }
 
         } catch (err) {
             console.error("error en refresh:", err);
+
         }
     }
 

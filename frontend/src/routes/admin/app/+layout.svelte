@@ -23,7 +23,7 @@
     import UsersIcon from "@lucide/svelte/icons/users";
     import LinkIcon from "@lucide/svelte/icons/link";
     import CircleUserRoundIcon from "@lucide/svelte/icons/circle-user-round";
-
+    import { toggleMode } from "mode-watcher";
     interface ItemMenu {
         label: string;
         path: string;
@@ -104,14 +104,18 @@
                             {/snippet}
                         </DropdownMenu.Trigger>
                         <DropdownMenu.Content>
+                            <DropdownMenu.Item onclick={toggleMode}>Dark/light</DropdownMenu.Item>
                             <DropdownMenu.Item>
                                 {#snippet child({ props })}
-                                    <a href="/admin/profile" class="w-full block px-2 py-1" {...props}> Profile </a>
+                                    <a href="/admin/profile" {...props}> Profile </a>
                                 {/snippet}
                             </DropdownMenu.Item>
+
                             <DropdownMenu.Item>
                                 {#snippet child({ props })}
-                                    <a href="/logout" class="w-full block px-2 py-1" {...props}> Logout </a>
+                                    <form action="/admin/auth?/logout" method="post">
+                                        <button type="submit" class="w-full" {...props}> Logout </button>
+                                    </form>
                                 {/snippet}
                             </DropdownMenu.Item>
                         </DropdownMenu.Content>
@@ -119,11 +123,9 @@
                 </SidebarMenuItem>
             </SidebarMenu>
         </SidebarFooter>
-        <SidebarRail />
     </Sidebar>
-
-    <SidebarInset>
-        <div class="min-h-[calc(100svh-3rem)]">
+    <div class="min-h-[calc(100svh)] w-full p-4">
+        <div class="h-full bg-background w-full">
             <header class="bg-background/80 sticky top-0 z-10 flex h-12 items-center gap-2 border-b px-3 backdrop-blur md:px-4">
                 <SidebarTrigger />
                 <div class="text-sm font-medium">{pathname.startsWith("/admin/app/urls") ? "Client URLs" : "Clients"}</div>
@@ -132,5 +134,5 @@
                 {@render children?.()}
             </main>
         </div>
-    </SidebarInset>
+    </div>
 </SidebarProvider>

@@ -41,9 +41,9 @@ export const actions = {
     },
     logout: async ({ cookies }) => {
         const backendUrl = (env.URL_BACKEND ?? "http://back-dev:5000") + "/admin";
-        const jwt = cookies.get("jwt");
+        const jwt = cookies.get("jwt_admin");
         if (!jwt) {
-            return redirect(302, "/");
+            return redirect(302, "/admin");
         }
         await fetch(`${backendUrl}/auth/logout`, {
             method: "POST",

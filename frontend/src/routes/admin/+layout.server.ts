@@ -10,7 +10,6 @@ export const load: LayoutServerLoad = async ({ depends, cookies, locals }) => {
     if (!jwt && !jwt_refresh) {
         return {};
     }
-    console.log("Admin JWT found, validating...");
     const response = await fetch(
         `${env.URL_BACKEND ?? "http://back-dev:5000"}/admin/auth`,
         {

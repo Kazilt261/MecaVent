@@ -1,5 +1,7 @@
 import { env } from "$env/dynamic/private";
+import { get } from "svelte/store";
 import type { LayoutServerLoad } from "./$types";
+import { getHost } from "$lib/utils/get_host";
 
 interface userData {
     id: number,
@@ -7,7 +9,7 @@ interface userData {
     email: string,
 }
 
-export const load: LayoutServerLoad = async ({ depends, cookies, url }) => {
+export const load: LayoutServerLoad = async ({ depends, cookies, url, request}) => {
     depends("app:auth");
     if (url.pathname.startsWith("/admin")){
         return {}
@@ -19,12 +21,12 @@ export const load: LayoutServerLoad = async ({ depends, cookies, url }) => {
         return {}
     }
     if (jwt) {
-        console.log("JWT found, validating...");
         const response = await fetch(`${backendUrl}/auth`, {
             method: "GET",
             headers: {
                 "Content-Type": "application/json",
-                "Authorization": `Bearer ${jwt}`
+                "Authorization": `Bearer ${jwt}`,
+                "x-tenant-host": getHost(request),
             },
         });
         if (!response.ok) {
@@ -33,7 +35,6 @@ export const load: LayoutServerLoad = async ({ depends, cookies, url }) => {
             return {}
         }
         const result = await response.json();
-        console.log("User data:", result);
         return {
             user: result as userData
         }

@@ -53,7 +53,7 @@ def run_alembic_for_client(args: list[str], client_db_url: str) -> int:
     return result.returncode
 
 def new_super_user():
-    from src.models.master.users import UserMasterApp
+    from src.models.clients import User
 
     selected_client = select_client()
     client_engine = create_engine(selected_client.db_client, future=True)
@@ -63,10 +63,10 @@ def new_super_user():
         input_email = input("Enter superuser email: ")
         input_password = input("Enter superuser password: ")
         
-        hashed_password = UserMasterApp.hash_password(input_password)
-        user = UserMasterApp(username=input_username, hashed_password=hashed_password, email=input_email, admin=True)
-        if UserMasterApp.validate_password(input_password):
-            print(UserMasterApp.validate_password(input_password))
+        hashed_password = User.hash_password(input_password)
+        user = User(username=input_username, hashed_password=hashed_password, email=input_email, admin=True)
+        if User.validate_password(input_password):
+            print(User.validate_password(input_password))
             continue
         if user.validate():
             print(user.validate())

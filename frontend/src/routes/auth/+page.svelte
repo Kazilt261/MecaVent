@@ -35,6 +35,9 @@
                     {/if}
                 </Button>
             </form>
+            <form action="?/test" method="POST">
+                <button type="submit">test</button>
+            </form>
         </Card.Content>
     </Card.Root>
 </section>
