@@ -10,6 +10,9 @@
     {#if data.user}
         <p class="text-center text-muted-foreground">Hello, {data.user.username}! You have signed in successfully.</p>
     {/if}
+    {#if data.tenant_data}
+        <p class="text-center text-muted-foreground">You are accessing tenant: {data.tenant_data.name_client}</p>
+    {/if}
     <p class="text-center text-muted-foreground">This is the home page. Please sign in to continue.</p>
     {#if data.user}
         <form action="/auth?/logout" method="POST" use:enhance>

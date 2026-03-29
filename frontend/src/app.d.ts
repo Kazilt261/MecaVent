@@ -3,7 +3,12 @@
 declare global {
 	namespace App {
 		// interface Error {}
-		interface Locals {}
+		interface Locals {
+			tenant_data: {
+				tenant_id:number;
+				name_client: string
+			} | null;
+		}
 		// interface PageData {}
 		// interface PageState {}
 		// interface Platform {}

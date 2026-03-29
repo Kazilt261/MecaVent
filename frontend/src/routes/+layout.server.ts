@@ -9,16 +9,20 @@ interface userData {
     email: string,
 }
 
-export const load: LayoutServerLoad = async ({ depends, cookies, url, request}) => {
+export const load: LayoutServerLoad = async ({ depends, cookies, url, request, locals}) => {
     depends("app:auth");
     if (url.pathname.startsWith("/admin")){
-        return {}
+        return {
+            tenant_data: locals.tenant_data
+        }
     }
     const backendUrl = env.URL_BACKEND ?? "http://back-dev:5000";
     const jwt = cookies.get("jwt");
     const reset_jwt = cookies.get("reset_jwt");
     if (!jwt && !reset_jwt) {
-        return {}
+        return {
+            tenant_data: locals.tenant_data
+        }
     }
     if (jwt) {
         const response = await fetch(`${backendUrl}/auth`, {
@@ -36,7 +40,8 @@ export const load: LayoutServerLoad = async ({ depends, cookies, url, request}) 
         }
         const result = await response.json();
         return {
-            user: result as userData
+            user: result as userData,
+            tenant_data: locals.tenant_data
         }
     }
 }
