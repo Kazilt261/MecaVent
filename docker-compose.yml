@@ -13,39 +13,17 @@ services:
         depends_on:
             - db
             - redis
-            - storage
 
     db:
-        image: supabase/postgres:15.1.1.78
-        environment:
-            POSTGRES_PASSWORD: ${SUPABASE_DB_PASSWORD:-postgres}
+        image: postgres:15
         volumes:
             - supabase_db_data:/var/lib/postgresql/data
-        ports:
-            - "${SUPABASE_DB_PORT:-54322}:5432"
-        env_file:
-            - .env
-
-    storage:
-        image: supabase/storage-api:v0.43.12
-        depends_on:
-            - db
-        ports:
-            - "${STORAGE_PORT:-8083}:8083"
         environment:
-            ANON_KEY: ${ANON_KEY}
-            SERVICE_KEY: ${SERVICE_ROLE_KEY}
-            PGRST_JWT_SECRET: ${PGRST_JWT_SECRET:-super-secret-jwt-token-with-at-least-32-characters-long}
-            DATABASE_URL: postgres://postgres:${SUPABASE_DB_PASSWORD:-postgres}@supabase-db:5432/postgres
-            POSTGRES_BACKEND_URL: postgres://postgres:${SUPABASE_DB_PASSWORD:-postgres}@supabase-db:5432/postgres
-            GLOBAL_S3_BUCKET: ${GLOBAL_S3_BUCKET:-local}
-            FILE_SIZE_LIMIT: 52428800 # 50MB
-            STORAGE_BACKEND: file
-            FILE_STORAGE_BACKEND_PATH: /var/lib/storage
-            TENANT_ID: default
-            REGION: local
-        volumes:
-            - ./volumes/storage:/var/lib/storage
+            POSTGRES_PASSWORD: ${SUPABASE_DB_PASSWORD:-postgres}
+            POSTGRES_USER: ${SUPABASE_DB_USER:-postgres}
+            POSTGRES_DB: ${SUPABASE_DB_NAME:-postgres}
+        ports:
+            - "${DB_PORT:-5432}:5432"
 
     redis:
         image: redis:7
