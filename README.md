@@ -78,6 +78,44 @@ Use `python manage.py <command>` to run backend management tasks:
 
 - `list_clients`: List all available clients in the master database.
 
+### Development Initialization
+
+To set up your application, you'll need to create a database for the client. Follow these steps:
+
+1. Create a new database in Docker using DBeaver or your preferred database client. Connect to the database and run:
+
+```SQL
+CREATE DATABASE {db_name_new}
+```
+
+2. Create a superuser in the master admin app:
+
+```bash
+make ssh-back
+
+uv run manage.py create_superuser_master
+```
+
+Follow the prompts to complete the superuser setup. (For more details, see the "Migrations" section.)
+
+3. Access the admin interface at `localhost:5001/admin` (port may be configured differently).
+
+4. Add a new client in the master app. Register the client with:
+   - A URI for the client database
+   - A URI for Redis (for development, you can use the same Redis instance with a different database number; change the last digit from 0 to 1)
+
+5. In the sidebar, go to **Clients URLs** and register the default URL for your browser (e.g., `localhost:5001`).
+
+6. Apply the migrations for the client:
+
+```bash
+uv run manage.py migrate
+```
+
+Your client application is now running. Visit `/` in your browser to see your client's name.
+
+To create a user for your client, use the commands in the "User Management" section.
+
 ## Production Database and Redis Options
 
 Production can work in two ways:
